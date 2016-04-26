@@ -1,4 +1,3 @@
--- Tue Apr 26 13:56:29 2016
 --- Reuh's class library version 0.1.1. Lua 5.1-5.3 and LuaJit compatible.
 -- Objects and classes behavior are identical, so you can consider this to be prototype-based.
 -- Features:

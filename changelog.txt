@@ -1,2 +1,4 @@
 0.1.1:
 	- Fixed a lot of bugs of the default class __tostring.
+0.1.0:
+	- Initial version.
