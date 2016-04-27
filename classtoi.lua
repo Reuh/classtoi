@@ -1,4 +1,4 @@
---- Reuh's class library version 0.1.1. Lua 5.1-5.3 and LuaJit compatible.
+--- Reuh's class library version 0.1.2. Lua 5.1-5.3 and LuaJit compatible.
 -- Objects and classes behavior are identical, so you can consider this to be prototype-based.
 -- Features:
 -- * Multiple inheritance with class(parents...) or someclass(newstuff...)
@@ -55,16 +55,26 @@ methods = {
 	-- The same happens with :new and :is, but since they're not metamethods, if not defined in a parent you won't
 	-- notice any difference.
 	-- TL;DR (since I think I'm not really clear): you can redefine __call, :new and :is in parents and use them in objects only.
-	new = function(self, ...)
-		local obj = self()
-		-- Setting class methods to the ones found in parents (we use rawset in order to avoid calling the __newindex metamethod)
-		different = methods.new     rawset(obj, "new", obj:__index("new") or nil)
-		different = methods["!is"]  rawset(obj, "is", obj:__index("is") or nil)
-		different = methods.__call  rawset(obj, "__call", obj:__index("__call") or nil)
-		different = nil
-		-- Call constructor
-		if obj.new ~= methods.new and type(obj.new) == "function" then obj:new(...) end
-		return obj
+	-- A new object will only be created if calling the method "class:new(...)", if you call for example "class.new(someTable, ...)", it
+	-- will only execute the constructor defined in the class on someTable. This can be used to execute the parent constructor in a child
+	-- object, for example.
+	["!new"] = function(self, ...)
+		if lastIndexed == self then
+			local obj = self()
+			-- Setting class methods to the ones found in parents (we use rawset in order to avoid calling the __newindex metamethod)
+			different = methods["!new"]  rawset(obj, "new", obj:__index("new") or nil)
+			different = methods["!is"]   rawset(obj, "is", obj:__index("is") or nil)
+			different = methods.__call   rawset(obj, "__call", obj:__index("__call") or nil)
+			different = nil
+			-- Call constructor
+			if obj.new ~= methods.new and type(obj.new) == "function" then obj:new(...) end
+			return obj
+		else
+			different = methods["!new"]
+			local new = lastIndexed:__index("new") or nil
+			different = nil
+			return new(self, ...)
+		end
 	end,
 	--- Returns true if self is other or a subclass of other.
 	-- If other is nil, will return true if self is a subclass of the class who called this method.
