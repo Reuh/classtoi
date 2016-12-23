@@ -1,5 +1,5 @@
 --- Reuh's class library version 0.1.2. Lua 5.1-5.3 and LuaJit compatible.
--- Objects and classes behavior are identical, so you can consider this to be prototype-based.
+-- Objects and classes behavior are identical, so you can consider this to be somewhat prototype-based.
 -- Features:
 -- * Multiple inheritance with class(parents...) or someclass(newstuff...)
 -- * Every metamethods supported
@@ -114,7 +114,7 @@ methods = {
 			if val ~= nil and val ~= different then return val end
 			-- If different search is on and the direct t[k] returns an identical value, force the __index metamethod search.
 			if different ~= nil and getmetatable(t) and getmetatable(t).__index then
-				local val = getmetatable(t):__index(k)
+				val = getmetatable(t):__index(k)
 				if val ~= nil and val ~= different then return val end
 			end
 		end
