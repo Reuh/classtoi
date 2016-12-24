@@ -1,4 +1,4 @@
---- Reuh's class library version 0.1.2. Lua 5.1-5.3 and LuaJit compatible.
+--- Reuh's class library version 0.1.3. Lua 5.1-5.3 and LuaJit compatible.
 -- Objects and classes behavior are identical, so you can consider this to be somewhat prototype-based.
 -- Features:
 -- * Multiple inheritance with class(parents...) or someclass(newstuff...)
@@ -21,8 +21,9 @@
 --   except __super and __index, but __index should call your __index and act like you expect. __super will however always be the default one
 --   and doesn't proxy in any way yours.
 --
--- Please also note that the last universal ancestor of the classes (defined here in BaseClass) sets the default __tostring method for nice
--- class-name-printing. Unlike previous text however, it is done in a normal inheritance-way and can be rewritten without any problem.
+-- Please also note that the last universal ancestor of the classes (defined here in BaseClass) sets the default __tostring method
+-- and __name attribute for nice class-name-printing. Unlike the previoulsy described attributes and methods however, it is done in a normal
+-- inheritance-way and can be rewritten without any problem (rewritting __name is especially useful to easily identify your classes).
 
 -- Lua versions compatibility
 local unpack = table.unpack or unpack
@@ -50,7 +51,7 @@ methods = {
 	-- In pratise, this only subclass the class and call the new method on it, so technically an object is a class.
 	-- Objects are exaclty like classes, but the __call metamethod will be replaced by one found in the parents,
 	-- or nil if doesn't exist (so an object is not directly subclassable).
-	-- (If no __call method is defined in a parent, you won't be able to call the object, but obj.__class will still
+	-- (If no __call method is defined in a parent, you won't be able to call the object, but obj.__call will still
 	-- returns the default (subclassing) method, from one of the parents classes.)
 	-- The same happens with :new and :is, but since they're not metamethods, if not defined in a parent you won't
 	-- notice any difference.
@@ -67,7 +68,7 @@ methods = {
 			different = methods.__call   rawset(obj, "__call", obj:__index("__call") or nil)
 			different = nil
 			-- Call constructor
-			if obj.new ~= methods.new and type(obj.new) == "function" then obj:new(...) end
+			if obj.new ~= methods["!new"] and type(obj.new) == "function" then obj:new(...) end
 			return obj
 		else
 			different = methods["!new"]
@@ -100,8 +101,8 @@ methods = {
 	end,
 	--- Internal value getting; this follows a precise search order.
 	-- For example: class(Base1, Base2){stuff}
-	-- When getting a value from the class, it will be first searched in stuff, then in Base2, then in all Base2 parents,
-	-- then in Base1, then in Base1 parents.
+	-- When getting a value from the class, it will be first searched in stuff, then in Base1, then in all Base1 parents,
+	-- then in Base2, then in Base2 parents.
 	-- A way to describe this will be search in the latest added tables (from the farthest child to the first parents), from left-to-right.
 	__index = function(self, k)
 		local proxied = methods["!"..tostring(k)]
@@ -147,10 +148,11 @@ end
 --- The class which will be a parents for all the other classes.
 -- We add some pretty-printing default in here. We temporarly remove the metatable in order to avoid a stack overflow.
 BaseClass = makeclass {
+	__name = "class",
 	__tostring = function(self)
-		local mt = getmetatable(self)
+		local mt, name = getmetatable(self), self.__name
 		setmetatable(self, nil)
-		local str = ("class (%s)"):format(tostring(self))
+		local str = ("%s (%s)"):format(tostring(name), tostring(self))
 		setmetatable(self, mt)
 		return str
 	end
@@ -162,11 +164,12 @@ if common_class and not common then
 	common = {}
 	-- class = common.class(name, table, parents...)
 	function common.class(name, table, ...)
-		table.new = table.init
-		return BaseClass(table, ...)
+		return BaseClass(table, ...){ __name = name, new = table.init }
 	end
 	-- instance = common.instance(class, ...)
-	function common.instance(class, ...) return class:new(...) end
+	function common.instance(class, ...)
+		return class:new(...)
+	end
 end
 
 return BaseClass
