@@ -1,3 +1,7 @@
+0.1.4:
+	- :new non-nil custom returns values now replace the usual returned instance
+	- Custom inherited __index metamethods are now called on the correct class instead of the class it is defined in.
+	- Added tests.
 0.1.3:
 	- Added __name attribute in BaseClass for a more informative __tostring.
 	- Fixed instanciation error when no custom :new method is defined.

@@ -1,4 +1,4 @@
---- Reuh's class library version 0.1.3. Lua 5.1-5.3 and LuaJit compatible.
+--- Reuh's class library version 0.1.4. Lua 5.1-5.3 and LuaJit compatible.
 -- Objects and classes behavior are identical, so you can consider this to be somewhat prototype-based.
 -- Features:
 -- * Multiple inheritance with class(parents...) or someclass(newstuff...)
@@ -8,11 +8,12 @@
 -- * Instanciate with class:new(...)
 -- * Test inheritance relations with class/object.is(thing, isThis)
 -- * Call object:new(...) on instanciation
+-- * If object:new(...) returns non-nil values, they will be returned instead of the instance
 -- * Call class.__inherit(class, inheritingClass) when creating a class inheriting the previous class. If class.__inherit returns a value, it will
 --   be used as the parent table instead of class, allowing some pretty fancy behavior (it's like an inheritance metamethod).
 -- * Implements Class Commons
 -- * I don't like to do this, but you can redefine every field and metamethod after class creation (except __index and __super).
--- Not features (things you may want to know):
+-- Not features / Things you may want to know:
 -- * Will set the metatable of all parent classes/tables if no metatable is set (the table will be its own metatable).
 -- * You can't redefine __super (any __super you define will be only avaible by searching in the default __super contents).
 -- * Redefining __super or __index after class creation will break everything (though it should be ok with new, is, __call and everything else).
@@ -20,6 +21,8 @@
 --   will return the default method and not the one you've defined. However, theses defaults will be replaced by yours automatically on instanciation,
 --   except __super and __index, but __index should call your __index and act like you expect. __super will however always be the default one
 --   and doesn't proxy in any way yours.
+-- * __index metamethods will be called with an extra third argument, which is the current class being searched in the inheritance tree.
+--   You can safely ignore it.
 --
 -- Please also note that the last universal ancestor of the classes (defined here in BaseClass) sets the default __tostring method
 -- and __name attribute for nice class-name-printing. Unlike the previoulsy described attributes and methods however, it is done in a normal
@@ -59,17 +62,22 @@ methods = {
 	-- A new object will only be created if calling the method "class:new(...)", if you call for example "class.new(someTable, ...)", it
 	-- will only execute the constructor defined in the class on someTable. This can be used to execute the parent constructor in a child
 	-- object, for example.
+	-- It should also be noted that if the new method returns non-nil value(s), they will be returned instead of the object.
 	["!new"] = function(self, ...)
 		if lastIndexed == self then
-			local obj = self()
+			local obj, ret = self(), nil
 			-- Setting class methods to the ones found in parents (we use rawset in order to avoid calling the __newindex metamethod)
 			different = methods["!new"]  rawset(obj, "new", obj:__index("new") or nil)
 			different = methods["!is"]   rawset(obj, "is", obj:__index("is") or nil)
 			different = methods.__call   rawset(obj, "__call", obj:__index("__call") or nil)
 			different = nil
 			-- Call constructor
-			if obj.new ~= methods["!new"] and type(obj.new) == "function" then obj:new(...) end
-			return obj
+			if obj.new ~= methods["!new"] and type(obj.new) == "function" then ret = { obj:new(...) } end
+			if not ret or #ret == 0 then
+				return obj
+			else
+				return unpack(ret)
+			end
 		else
 			different = methods["!new"]
 			local new = lastIndexed:__index("new") or nil
@@ -104,18 +112,19 @@ methods = {
 	-- When getting a value from the class, it will be first searched in stuff, then in Base1, then in all Base1 parents,
 	-- then in Base2, then in Base2 parents.
 	-- A way to describe this will be search in the latest added tables (from the farthest child to the first parents), from left-to-right.
-	__index = function(self, k)
+	-- self always refer to the initial table the metamethod was called on, super refers to the class currently being searched for a value.
+	__index = function(self, k, super)
 		local proxied = methods["!"..tostring(k)]
 		if proxied ~= nil and proxied ~= different then -- proxied methods
 			lastIndexed = self
 			return proxied
 		end
-		for _, t in ipairs(self.__super) do -- search in super (will auto-follow __index metamethods)
-			local val = t[k]
+		for _, t in ipairs((super or self).__super) do -- search in super (will follow __index metamethods)
+			local val = rawget(t, k)
 			if val ~= nil and val ~= different then return val end
-			-- If different search is on and the direct t[k] returns an identical value, force the __index metamethod search.
-			if different ~= nil and getmetatable(t) and getmetatable(t).__index then
-				val = getmetatable(t):__index(k)
+			-- Also covers the case when different search is enabled and the raw t[k] returns an identical value, so the __index metamethod search will be tried for another value.
+			if getmetatable(t) and getmetatable(t).__index then
+				val = getmetatable(t).__index(self, k, t)
 				if val ~= nil and val ~= different then return val end
 			end
 		end
