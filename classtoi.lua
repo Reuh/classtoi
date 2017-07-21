@@ -139,6 +139,7 @@ function makeclass(...)
 	for k, v in pairs(methods) do -- copy class methods
 		if k:sub(1, 1) ~= "!" then class[k] = v end -- except proxied methods
 	end
+	setmetatable(class, class)
 	for _, t in ipairs({...}) do -- fill super
 		if getmetatable(t) == nil then setmetatable(t, t) end -- auto-metatable the table
 		if type(t.__inherit) == "function" then t = t:__inherit(class) or t end -- call __inherit callback
@@ -147,11 +148,11 @@ function makeclass(...)
 	-- Metamethods query are always raw and thefore don't follow our __index, so we need to manually define thoses.
 	for _, metamethod in ipairs(metamethods) do
 		local inSuper = class:__index(metamethod)
-		if class[metamethod] == nil and inSuper then
-			class[metamethod] = inSuper
+		if inSuper and rawget(class, metamethod) == nil then
+			rawset(class, metamethod, inSuper)
 		end
 	end
-	return setmetatable(class, class)
+	return class
 end
 
 --- The class which will be a parents for all the other classes.
