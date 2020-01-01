@@ -2,7 +2,7 @@ local T = require("knife-test")
 
 -- luacheck: ignore T
 T("Given the base class", function(T)
-	local class = require("classtoi")
+	local class = dofile(arg[1] or "../classtoi.lua")
 
 	-- Inheritance
 	T("When subclassed with an attribute", function(T)
