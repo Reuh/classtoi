@@ -1,3 +1,12 @@
+classtoi: more features than class-toi light; everything is just as fast except class creation.
+1.0.0:
+	- Initial version.
+
+classtoi-light: only the minimum features.
+1.0.0:
+	- Initial version.
+
+classtoi-heavy: all the features and the slowness, not recommended anymore.
 0.1.4:
 	- :new non-nil custom returns values now replace the usual returned instance
 	- Custom inherited __index metamethods are now called on the correct class instead of the class it is defined in.

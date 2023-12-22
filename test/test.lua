@@ -1,8 +1,10 @@
+-- note: this will test again the classtoi-heavy featureset only
+
 local T = require("knife-test")
 
 -- luacheck: ignore T
 T("Given the base class", function(T)
-	local class = dofile(arg[1] or "../classtoi.lua")
+	local class = dofile(arg[1] or "../classtoi-heavy.lua")
 
 	-- Inheritance
 	T("When subclassed with an attribute", function(T)
